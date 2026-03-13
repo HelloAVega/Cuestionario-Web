@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiz – Tecnologías Web</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #13161d;
+    --surface2: #1b1f29;
+    --border: #252a38;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --correct: #00c97a;
+    --wrong: #ff3b5c;
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .screen { display: none; position: relative; z-index: 10; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  #screen-home {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .home-inner { max-width: 860px; width: 100%; }
+
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(0,229,255,.08);
+    border: 1px solid rgba(0,229,255,.25);
+    padding: 5px 14px;
+    border-radius: 99px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: clamp(30px, 6vw, 58px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    margin-bottom: 14px;
+  }
+  h1 span { color: var(--accent); }
+
+  .home-sub {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.7;
+    max-width: 620px;
+    margin-bottom: 28px;
+  }
+
+  .select-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .sel-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all .2s;
+  }
+  .sel-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .sections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .sec-card {
+    text-align: left;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 14px;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    color: inherit;
+  }
+
+  .sec-card:hover { border-color: rgba(0,229,255,.35); transform: translateY(-2px); }
+  .sec-card.selected { border-color: var(--accent); background: rgba(0,229,255,.06); }
+
+  .sec-check {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    color: var(--accent);
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .sec-card.selected .sec-check { opacity: 1; }
+
+  .sec-icon { font-size: 22px; margin-bottom: 8px; }
+  .sec-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .sec-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  #start-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg,var(--accent3),var(--accent));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+  }
+  #start-btn:hover { opacity: .9; transform: translateY(-1px); }
+  #start-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+  .start-note {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  /* QUIZ */
+  #quiz-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,12,16,.93);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+  .qh-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .qh-back {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .qh-title {
+    font-weight: 700;
+    font-size: 14px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .qh-counter {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .prog-track { height: 3px; background: var(--border); margin-top: 10px; }
+  .prog-fill {
+    height: 100%;
+    background: linear-gradient(90deg,var(--accent3),var(--accent));
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  #quiz-body {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .section-divider { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .section-divider .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    background: rgba(255,107,53,.1);
+    border: 1px solid rgba(255,107,53,.25);
+    padding: 4px 10px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .section-divider .line { flex: 1; height: 1px; background: var(--border); }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .question-card.answered-correct { border-color: rgba(0,201,122,.35); }
+  .question-card.answered-wrong { border-color: rgba(255,59,92,.35); }
+
+  .q-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .q-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,229,255,.08);
+    border: 1px solid rgba(0,229,255,.2);
+    padding: 4px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .q-text { font-size: 15px; line-height: 1.6; font-weight: 600; }
+
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all .17s;
+
+    color: #fff;
+  }
+  .option:hover:not(.locked) { border-color: rgba(0,229,255,.4); background: rgba(0,229,255,.05); }
+  .option.correct { border-color: var(--correct); background: rgba(0,201,122,.08); }
+  .option.wrong { border-color: var(--wrong); background: rgba(255,59,92,.08); }
+
+  .opt-letter {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .opt-text { 
+    font-size: 14px; 
+    line-height: 1.45; 
+
+    color: #fff !important;
+  }
+
+  .feedback {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: rgba(0,201,122,.08); border: 1px solid rgba(0,201,122,.2); color: #5ddb9e; }
+  .feedback.wrong-fb { background: rgba(255,59,92,.08); border: 1px solid rgba(255,59,92,.2); color: #ff7a92; }
+
+  #quiz-footer { max-width: 860px; margin: 0 auto; padding: 0 16px 28px; }
+  #submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg,var(--accent3),var(--accent));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #submit-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* RESULTS */
+  #screen-results { padding: 22px 16px 40px; }
+  .results-inner { max-width: 860px; margin: 0 auto; }
+
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .score-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .score-number { font-size: 50px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .score-denom { font-size: 20px; color: var(--muted); font-weight: 400; }
+  .score-pct { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+  .score-grade { display: inline-block; font-size: 15px; font-weight: 700; padding: 9px 20px; border-radius: 99px; }
+  .grade-a { background:rgba(0,201,122,.15); color:var(--correct); border:1px solid rgba(0,201,122,.3); }
+  .grade-b { background:rgba(0,229,255,.1); color:var(--accent); border:1px solid rgba(0,229,255,.25); }
+  .grade-c { background:rgba(255,107,53,.1); color:var(--accent2); border:1px solid rgba(255,107,53,.25); }
+  .grade-d { background:rgba(255,59,92,.1); color:var(--wrong); border:1px solid rgba(255,59,92,.25); }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-val { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+  .stat-lbl { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .stat-correct .stat-val { color: var(--correct); }
+  .stat-wrong .stat-val { color: var(--wrong); }
+  .stat-pct .stat-val { color: var(--accent); }
+
+  .section-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(170px,1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ss-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .ss-name { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+  .ss-bar-track { height: 5px; background: var(--border); border-radius: 99px; margin-bottom: 7px; overflow: hidden; }
+  .ss-bar-fill { height: 100%; border-radius: 99px; transition: width .8s ease; width: 0%; }
+  .ss-stat { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .results-heading {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-item {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--wrong);
+  }
+  .r-meta { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .r-qnum { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .r-badge.bad {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: rgba(255,59,92,.12);
+    color: var(--wrong);
+  }
+  .r-question { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
+  .r-answer { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .ok-ans { color: var(--correct); font-family: var(--mono); font-size: 11px; }
+  .bad-ans { color: var(--wrong); font-family: var(--mono); font-size: 11px; }
+  .r-explanation {
+    font-size: 13px; line-height: 1.6; color: #a0a8c0;
+    background: var(--surface2); padding: 10px 12px; border-radius: 8px; margin-top: 8px;
+  }
+
+  .res-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  #retry-btn, #home-btn {
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #retry-btn { background: linear-gradient(135deg,var(--accent3),var(--accent)); border: none; color: #fff; }
+  #home-btn { background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); }
+
+  @media (max-width: 640px) {
+    .sections-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .q-header { flex-direction: column; }
+    .stats-row, .res-btns { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 380px) {
+    .sections-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-inner">
+    <div class="badge">// Tecnologías Web — Cuestionario Interactivo</div>
+    <h1>Quiz de <span>Tecnologías Web</span><br></h1>
+    <p class="home-sub">7 secciones · <strong style="color:var(--text)">15 preguntas</strong> cada una · hasta <strong style="color:var(--text)">105 preguntas</strong> en total.<br>Elige las secciones que quieres practicar.</p>
+    <div class="select-btns">
+      <button class="sel-btn" id="btn-all" type="button">✓ Seleccionar todo</button>
+      <button class="sel-btn" id="btn-none" type="button">✕ Limpiar</button>
+    </div>
+    <div class="sections-grid" id="sections-grid"></div>
+    <button id="start-btn" disabled type="button">Comenzar Quiz</button>
+    <p class="start-note" id="start-note">Selecciona al menos una sección</p>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="screen-quiz" class="screen">
+  <div id="quiz-header">
+    <div class="qh-inner">
+      <button class="qh-back" id="back-btn" type="button">← Inicio</button>
+      <div class="qh-title" id="qh-title">Quiz</div>
+      <div class="qh-counter" id="qh-counter">0/0</div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+  <div id="quiz-body"></div>
+  <div id="quiz-footer"><button id="submit-btn" disabled type="button">Ver Resultados</button></div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="results-inner">
+    <div class="score-card">
+      <div class="score-label">Resultado Final</div>
+      <div class="score-number" id="res-score">—</div>
+      <div class="score-pct" id="res-pct"></div>
+      <div class="score-grade" id="res-grade"></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box stat-correct"><div class="stat-val" id="s-correct">0</div><div class="stat-lbl">Correctas</div></div>
+      <div class="stat-box stat-wrong"><div class="stat-val" id="s-wrong">0</div><div class="stat-lbl">Incorrectas</div></div>
+      <div class="stat-box stat-pct"><div class="stat-val" id="s-pct">0%</div><div class="stat-lbl">Porcentaje</div></div>
+    </div>
+    <div class="results-heading">📊 Resultado por sección</div>
+    <div class="section-scores" id="section-scores"></div>
+    <div class="results-heading">📋 Preguntas incorrectas</div>
+    <div id="results-list"></div>
+    <div class="res-btns">
+      <button id="retry-btn" type="button">↺ Repetir Quiz</button>
+      <button id="home-btn" type="button">⌂ Cambiar secciones</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const SECTIONS = [
+  { id:'osi', name:'Modelo OSI', icon:'🔗', questions:[
+    { q:"¿Cuántas capas tiene el modelo OSI?", opts:["4","5","7","9"], ans:2, exp:"El modelo OSI (Open Systems Interconnection) tiene exactamente 7 capas: Física, Enlace de Datos, Red, Transporte, Sesión, Presentación y Aplicación." },
+    { q:"¿Cuál es el nombre de la PDU en la Capa de Transporte (Capa 4)?", opts:["Trama","Paquete","Segmento","Bits"], ans:2, exp:"La PDU de la Capa 4 (Transporte) se llama Segmento. Capa 3→Paquete, Capa 2→Trama, Capa 1→Bits." },
+    { q:"¿Qué información agrega la Capa de Red (Capa 3) a la PDU?", opts:["Puertos TCP/UDP","Dirección MAC origen/destino","Dirección IP origen/destino","Señales eléctricas"], ans:2, exp:"La Capa 3 (Red) agrega las direcciones IP de origen y destino que permiten enrutar paquetes entre redes distintas." },
+    { q:"¿Qué proceso ocurre cuando la PDU desciende por las capas OSI?", opts:["Desencapsulamiento","Encapsulamiento","Fragmentación","Cifrado"], ans:1, exp:"Al bajar ocurre encapsulamiento: cada capa añade su propia cabecera (y a veces cola) a los datos que recibe de la capa superior." },
+    { q:"La Capa Física (Capa 1) es responsable de:", opts:["Enrutar paquetes IP","Detectar errores en tramas","Convertir bits en señales eléctricas/ópticas","Establecer sesiones entre aplicaciones"], ans:2, exp:"La Capa 1 transmite bits sin procesar sobre el medio físico, convirtiendo 0s y 1s en señales físicas (eléctricas, luminosas o electromagnéticas)." },
+    { q:"¿Qué agrega la Capa de Enlace de Datos (Capa 2) para formar una Trama?", opts:["Dirección IP y máscara de subred","Número de secuencia TCP","Dirección MAC origen, destino y FCS","Puerto de origen y destino"], ans:2, exp:"La Capa 2 agrega MACs de origen/destino y FCS (Frame Check Sequence) para detección de errores en transmisión local." },
+    { q:"¿En qué capa OSI opera el protocolo TLS/SSL?", opts:["Capa 4 Transporte","Capa 5 Sesión","Capa 6 Presentación","Capa 7 Aplicación"], ans:2, exp:"TLS/SSL opera en la Capa de Presentación (Capa 6), encargada del cifrado, compresión y conversión de formatos." },
+    { q:"La Capa de Sesión (Capa 5) es responsable de:", opts:["Controlar bits físicos","Establecer, mantener y cerrar sesiones entre aplicaciones","Traducir formatos de datos","Enrutar paquetes"], ans:1, exp:"La Capa de Sesión gestiona el diálogo entre dispositivos: abre, mantiene y cierra las sesiones de comunicación entre procesos de aplicación." },
+    { q:"¿Qué significa PDU en el modelo OSI?", opts:["Protocol Data Unit","Physical Data Uplink","Packet Distribution Unit","Protocol Delivery Update"], ans:0, exp:"PDU significa Protocol Data Unit (Unidad de Datos de Protocolo). Es el nombre genérico de los bloques de datos en cada capa OSI." },
+    { q:"¿Qué capa OSI maneja el cifrado y la traducción de formatos?", opts:["Capa de Red","Capa de Transporte","Capa de Sesión","Capa de Presentación"], ans:3, exp:"La Capa de Presentación (Capa 6) traduce formatos: cifrado, compresión y conversión (ASCII, JPEG, MPEG)." },
+    { q:"¿En qué capa OSI opera el protocolo IP?", opts:["Capa 1 Física","Capa 2 Enlace de Datos","Capa 3 Red","Capa 4 Transporte"], ans:2, exp:"IP (Internet Protocol) opera en la Capa 3 (Red), responsable del direccionamiento lógico y el enrutamiento entre redes." },
+    { q:"¿Qué capa OSI garantiza la entrega confiable y en orden?", opts:["Capa 2","Capa 3","Capa 4 Transporte","Capa 5"], ans:2, exp:"La Capa 4 (Transporte) con TCP garantiza entrega confiable, ordenada y sin errores. Maneja control de flujo y retransmisiones." },
+    { q:"¿Cómo se llama la PDU en la Capa 2 (Enlace de Datos)?", opts:["Paquete","Segmento","Trama (Frame)","Datagrama"], ans:2, exp:"La PDU de la Capa 2 es la Trama (Frame): contiene la MAC, los datos encapsulados y el FCS para verificación de errores." },
+    { q:"El proceso inverso al encapsulamiento al subir las capas en el receptor se llama:", opts:["Multiplexación","Desencapsulamiento","Fragmentación","Sincronización"], ans:1, exp:"Desencapsulamiento: al subir por las capas, cada una extrae y procesa su cabecera, pasando los datos a la capa superior hasta llegar a Aplicación." },
+    { q:"¿Qué capa OSI es la más cercana al usuario final?", opts:["Capa 1 Física","Capa 4 Transporte","Capa 6 Presentación","Capa 7 Aplicación"], ans:3, exp:"La Capa 7 (Aplicación) es la más cercana al usuario. HTTP, SMTP, FTP, DNS son protocolos de esta capa." }
+  ]},
+  { id:'tcp', name:'Modelo TCP/IP', icon:'🌐', questions:[
+    { q:"¿Cuántas capas tiene el modelo TCP/IP?", opts:["3","4","5","7"], ans:1, exp:"El modelo TCP/IP tiene 4 capas: Acceso a la Red, Internet, Transporte y Aplicación." },
+    { q:"¿Cuál es la diferencia principal entre TCP y UDP?", opts:["TCP está en Capa 3; UDP en Capa 4","TCP garantiza entrega ordenada; UDP es rápido sin garantía","TCP solo para archivos; UDP solo para correo","Son idénticos"], ans:1, exp:"TCP establece conexión y garantiza entrega ordenada. UDP es sin conexión, más rápido; ideal para streaming, DNS y videojuegos." },
+    { q:"¿En qué capa del modelo TCP/IP opera HTTP/HTTPS?", opts:["Acceso a la Red","Internet","Transporte","Aplicación"], ans:3, exp:"HTTP y HTTPS son protocolos de la Capa de Aplicación del modelo TCP/IP." },
+    { q:"La capa 'Acceso a la Red' del TCP/IP equivale a qué capas OSI?", opts:["Solo Capa Física","Capas Física y Enlace de Datos","Capas Red y Transporte","Capas Sesión, Presentación y Aplicación"], ans:1, exp:"La capa Acceso a la Red (TCP/IP) combina las capas Física (1) y Enlace de Datos (2) del modelo OSI." },
+    { q:"¿Cómo se llama la PDU en la capa Internet del modelo TCP/IP?", opts:["Segmento","Datagrama / Paquete","Trama","Socket"], ans:1, exp:"En la capa Internet, la PDU se llama Datagrama o Paquete. Contiene las direcciones IP de origen y destino." },
+    { q:"¿Cuál es el orden correcto del three-way handshake de TCP?", opts:["ACK → SYN → SYN-ACK","SYN → SYN-ACK → ACK","SYN-ACK → SYN → ACK","SYN → ACK → SYN-ACK"], ans:1, exp:"Three-way handshake: (1) cliente envía SYN, (2) servidor responde SYN-ACK, (3) cliente confirma con ACK." },
+    { q:"¿Qué protocolo se usa para enviar correos desde el cliente al servidor?", opts:["FTP","SMTP","POP3","IMAP"], ans:1, exp:"SMTP (Simple Mail Transfer Protocol) envía correos del cliente al servidor. POP3 e IMAP se usan para recibirlos." },
+    { q:"El protocolo ARP sirve para:", opts:["Resolver nombres a IPs","Traducir IPs a direcciones MAC","Establecer conexiones TCP seguras","Cifrar paquetes"], ans:1, exp:"ARP (Address Resolution Protocol) resuelve una IP a su MAC física dentro de la red local." },
+    { q:"¿Qué puerto TCP usa HTTPS por defecto?", opts:["80","21","443","8080"], ans:2, exp:"HTTPS usa el puerto TCP 443. HTTP usa el 80. FTP usa el 21." },
+    { q:"¿Qué significa IP en redes?", opts:["Internet Program","Interconnected Protocol","Internet Protocol","Internal Process"], ans:2, exp:"IP significa Internet Protocol, responsable del direccionamiento lógico y el enrutamiento entre redes." },
+    { q:"¿Cuál es la función principal del protocolo DNS en TCP/IP?", opts:["Cifrar el tráfico web","Traducir nombres de dominio a direcciones IP","Asignar IPs dinámicamente","Enrutar paquetes entre routers"], ans:1, exp:"DNS actúa como la 'agenda' de Internet: traduce nombres legibles (google.com) a IPs que usan las máquinas." },
+    { q:"¿Qué protocolo asigna IP automáticamente a un dispositivo?", opts:["DNS","ARP","DHCP","FTP"], ans:2, exp:"DHCP (Dynamic Host Configuration Protocol) asigna automáticamente IP, máscara, gateway y DNS a dispositivos que se conectan." },
+    { q:"¿Qué identifica un número de puerto en TCP/IP?", opts:["La dirección física del dispositivo","Una aplicación o servicio específico en un host","La velocidad de conexión","El tipo de cable físico"], ans:1, exp:"Los puertos identifican aplicaciones/servicios. Junto con la IP forman un socket. Puertos 0-1023 son 'bien conocidos' (HTTP:80, HTTPS:443, SSH:22)." },
+    { q:"¿Qué versión del protocolo IP reemplaza a IPv4?", opts:["IPv5","IPv6","IPv7","IPvX"], ans:1, exp:"IPv6 usa direcciones de 128 bits (vs 32 de IPv4), solucionando el agotamiento de direcciones. Ej: 2001:0db8:85a3::8a2e:0370:7334." },
+    { q:"¿Cuál es la diferencia entre IP pública y privada?", opts:["La pública es más rápida","La pública es enrutable en Internet; la privada solo es válida en la red local","Las privadas las asigna el ISP; las públicas el router","No hay diferencia técnica"], ans:1, exp:"IP pública: identifica al dispositivo en Internet (asignada por el ISP). IPs privadas (192.168.x.x, 10.x.x.x) se usan dentro de LANs y no son enrutables en Internet." }
+  ]},
+  { id:'dns', name:'DNS y Resolución', icon:'🔍', questions:[
+    { q:"¿Qué componente DNS resuelve consultas localmente antes de contactar servidores externos?", opts:["Servidor Root","Servidor TLD","Resolver / DNS Recursivo","Servidor Autoritativo"], ans:2, exp:"El Resolver (DNS Recursivo) revisa su caché primero. Si no tiene respuesta, inicia la consulta iterativa Root → TLD → Autoritativo." },
+    { q:"¿Qué servidor DNS conoce la IP definitiva del dominio consultado?", opts:["Servidor Root","Servidor TLD","Servidor Autoritativo","Servidor del ISP"], ans:2, exp:"El Servidor Autoritativo tiene autoridad sobre la zona del dominio y responde con el registro final. Es el último eslabón de la resolución." },
+    { q:"¿Qué función cumple un servidor TLD?", opts:["Almacena todos los registros del mundo","Conoce la IP de cualquier dominio","Redirige al servidor autoritativo de cada extensión (.com, .edu)","Cachea respuestas de otros servidores"], ans:2, exp:"El servidor TLD sabe qué servidor autoritativo gestiona los dominios de su extensión. No almacena IPs finales." },
+    { q:"¿Cuántos grupos de servidores Root existen en el DNS global?", opts:["3","7","13","26"], ans:2, exp:"Existen 13 grupos de servidores Root (a hasta m root-servers.net). Físicamente hay cientos de instancias usando anycast." },
+    { q:"¿Qué tipo de registro DNS mapea un dominio a una IPv4?", opts:["CNAME","MX","AAAA","A"], ans:3, exp:"El registro tipo A apunta un nombre de dominio a una IPv4. AAAA es para IPv6, MX para servidores de correo, CNAME para alias." },
+    { q:"¿Qué registro DNS define los servidores de correo de un dominio?", opts:["A","CNAME","MX","TXT"], ans:2, exp:"El registro MX (Mail Exchanger) especifica los servidores responsables de recibir correo para el dominio, con un valor de prioridad." },
+    { q:"¿Por qué es importante el caché DNS?", opts:["Cifra las consultas DNS","Almacena respuestas temporalmente para acelerar consultas futuras y reducir tráfico","Bloquea consultas maliciosas","Asigna IPs estáticas a dominios populares"], ans:1, exp:"El caché DNS guarda respuestas previas durante el TTL. Acelera la navegación y reduce la carga sobre los servidores DNS." },
+    { q:"¿Qué significa TTL en registros DNS?", opts:["Transfer and Translate Layer","Time To Live: tiempo que un registro DNS puede ser cacheado","Total Traffic Load","Type Transfer Level"], ans:1, exp:"TTL (Time To Live) indica cuántos segundos puede un resolver cachear un registro DNS. Al vencer debe volver a consultar el autoritativo." },
+    { q:"¿Qué registro DNS crea un alias que apunta a otro nombre de dominio?", opts:["A","AAAA","MX","CNAME"], ans:3, exp:"CNAME (Canonical Name) crea un alias de un nombre a otro. Ej: www.ejemplo.com → ejemplo.com. No puede apuntar directamente a una IP." },
+    { q:"En resolución iterativa, ¿qué responde el servidor Root a una consulta por www.uni.edu?", opts:["La IP de www.uni.edu directamente","La IP del servidor autoritativo","La dirección del servidor TLD responsable de .edu","Consulta a otro Root en cascada"], ans:2, exp:"El servidor Root no conoce IPs finales. Indica cuál es el servidor TLD responsable de la extensión .edu y el Resolver continúa desde ahí." },
+    { q:"¿Qué protocolo de transporte usa DNS principalmente?", opts:["TCP puerto 80","UDP puerto 53","TCP puerto 443","UDP puerto 80"], ans:1, exp:"DNS usa UDP puerto 53 porque las consultas son pequeñas y la velocidad es prioritaria. Usa TCP cuando las respuestas superan 512 bytes." },
+    { q:"¿Qué es DNSSEC?", opts:["DNS cifrado con HTTPS","Extensión que agrega firmas digitales a registros DNS para verificar autenticidad","Protocolo para bloquear dominios maliciosos","Sistema de caché distribuida para DNS"], ans:1, exp:"DNSSEC agrega firmas criptográficas a los registros DNS para garantizar que las respuestas no han sido manipuladas. Protege contra DNS spoofing/poisoning." },
+    { q:"¿Qué ocurre si el servidor autoritativo está caído y el TTL expiró?", opts:["El Resolver usa el caché indefinidamente","La consulta falla inmediatamente sin importar el caché","Se consulta al Root como respaldo","La resolución DNS falla hasta que el servidor se recupere"], ans:3, exp:"Sin TTL válido en caché y con el autoritativo caído, la resolución DNS falla. Por eso los dominios críticos usan múltiples servidores autoritativos." },
+    { q:"¿Qué herramienta CLI se usa comúnmente para consultas DNS manuales?", opts:["ping","traceroute","nslookup / dig","netstat"], ans:2, exp:"nslookup y dig son herramientas CLI para consultar registros DNS. dig (más potente) muestra el detalle completo de la respuesta DNS." },
+    { q:"¿Qué es el 'DNS poisoning' (envenenamiento de caché)?", opts:["Error de configuración en el autoritativo","Ataque que inserta registros DNS falsos en la caché de un resolver para redirigir tráfico","Proceso normal de actualizar registros caducados","Técnica para acelerar la resolución DNS"], ans:1, exp:"DNS poisoning: un atacante inserta respuestas DNS falsas en la caché del resolver, redirigiendo usuarios a sitios fraudulentos. DNSSEC mitiga este riesgo." }
+  ]},
+  { id:'cloud', name:'Hosting y Cloud', icon:'☁️', questions:[
+    { q:"¿Cuál es la diferencia entre Hosting Compartido y un VPS?", opts:["Hosting Compartido usa VMs; VPS usa hardware dedicado","En Hosting Compartido los recursos son compartidos; en VPS son aislados con Hypervisor","VPS no permite SO personalizados","Son técnicamente idénticos"], ans:1, exp:"En Hosting Compartido múltiples clientes comparten el servidor físico. En VPS un Hypervisor crea instancias virtuales aisladas con recursos garantizados." },
+    { q:"¿Qué es un Hypervisor?", opts:["Protocolo de red entre servidores","Software que crea y gestiona múltiples VMs sobre un hardware físico","El servidor físico principal de un datacenter","Herramienta de monitoreo de redes"], ans:1, exp:"El Hypervisor (VMware ESXi, KVM, Hyper-V) virtualiza el hardware permitiendo que múltiples SO corran de forma aislada en una misma máquina física." },
+    { q:"En PaaS, ¿qué gestiona el proveedor cloud?", opts:["Solo la red física","Hardware, SO y middleware; el cliente solo gestiona código y datos","Solo el almacenamiento","El cliente gestiona todo"], ans:1, exp:"En PaaS el proveedor gestiona: hardware, red, virtualización, SO, middleware y runtime. El cliente solo se ocupa de código y datos. Ej: Heroku, Google App Engine." },
+    { q:"¿Cuál es un ejemplo de servicio SaaS?", opts:["Amazon EC2","Microsoft Azure VMs","Google Docs / Salesforce","Google App Engine"], ans:2, exp:"SaaS provee software listo para usar vía web. Google Docs, Salesforce, Office 365 son SaaS. EC2 y Azure VMs son IaaS. App Engine es PaaS." },
+    { q:"¿Qué responsabilidades mantiene el cliente en IaaS?", opts:["Solo gestionar datos de negocio","Gestionar SO, middleware, runtime, datos y aplicaciones","No tiene responsabilidades","Solo configurar la UI"], ans:1, exp:"IaaS: el proveedor gestiona hardware, red y virtualización. El cliente es responsable del SO hacia arriba: SO, middleware, runtime, datos y apps." },
+    { q:"¿Cuál es el principal beneficio del cloud computing frente a on-premise?", opts:["Mayor velocidad de CPU garantizada","Escalabilidad elástica: pagar solo por recursos usados según demanda","Menor latencia garantizada","Los datos son más seguros"], ans:1, exp:"La escalabilidad elástica (pago por uso) es la ventaja clave: aumentar o reducir recursos en minutos según demanda, convirtiendo CapEx en OpEx." },
+    { q:"¿Qué diferencia a un servidor dedicado de un VPS?", opts:["El dedicado usa virtualización; el VPS no","En un dedicado el cliente tiene acceso exclusivo a todo el hardware; en VPS comparte el hardware con otros VMs","El VPS es más caro que el dedicado","No existe diferencia"], ans:1, exp:"Un servidor dedicado asigna toda la máquina física a un solo cliente. Un VPS comparte el hardware pero con recursos virtuales aislados." },
+    { q:"¿Qué es la escalabilidad horizontal en cloud?", opts:["Aumentar CPU y RAM del servidor existente","Agregar más instancias/servidores para distribuir la carga","Aumentar el ancho de banda","Migrar a un datacenter más grande"], ans:1, exp:"Escalabilidad horizontal (scale out): agregar más instancias. Escalabilidad vertical (scale up): aumentar recursos (CPU/RAM) de una instancia existente." },
+    { q:"¿Qué es un CDN (Content Delivery Network)?", opts:["Una red de bases de datos distribuidas","Red de servidores geográficamente distribuidos que entrega contenido desde el nodo más cercano al usuario","Un tipo de VPS con múltiples IPs","Un protocolo para comprimir contenido web"], ans:1, exp:"Un CDN (Cloudflare, Akamai) distribuye copias del contenido en servidores globales, reduciendo latencia al servir desde el nodo más cercano." },
+    { q:"¿Qué significa CapEx vs OpEx en cloud computing?", opts:["CapEx = capacitación; OpEx = operación de software","CapEx = gasto de capital en infraestructura propia; OpEx = gasto operativo en servicios cloud por uso","CapEx = servidores en la nube; OpEx = servidores locales","Son sinónimos empresariales"], ans:1, exp:"CapEx: inversión en infraestructura propia (comprar servidores). OpEx: pago por uso de servicios cloud. El cloud convierte CapEx en OpEx, mejorando el flujo de caja." },
+    { q:"¿Cuál es un ejemplo real de proveedor IaaS?", opts:["Heroku","Salesforce","Amazon EC2 / Microsoft Azure VMs","Dropbox"], ans:2, exp:"Amazon EC2 y Azure VMs son IaaS: el cliente instala y gestiona su propio SO. Heroku es PaaS; Salesforce y Dropbox son SaaS." },
+    { q:"¿Qué es el 'multi-tenancy' en cloud computing?", opts:["Usar múltiples proveedores cloud simultáneamente","Múltiples clientes comparten infraestructura del proveedor con aislamiento lógico","Tener backups en múltiples regiones","Distribuir carga entre servidores dedicados"], ans:1, exp:"Multi-tenancy: múltiples clientes (tenants) comparten la misma infraestructura del proveedor, con aislamiento lógico de datos y recursos entre clientes." },
+    { q:"¿Qué es un contenedor (Docker) frente a una VM?", opts:["Una VM completa con su propio SO","Unidad ligera que empaqueta la app y sus dependencias compartiendo el kernel del SO host","Un tipo de Hypervisor de segunda generación","Un servicio de almacenamiento cloud"], ans:1, exp:"Docker es más ligero que una VM: empaqueta la app y dependencias compartiendo el kernel del SO host. Es portable, rápido de iniciar y eficiente en recursos." },
+    { q:"¿Qué diferencia hay entre una región y una zona de disponibilidad (AZ) en AWS?", opts:["Son sinónimos","Una región es un área geográfica con múltiples AZ; las AZ son datacenters independientes dentro de una región","Una AZ es más grande que una región","Las regiones son virtuales; las AZ son físicas"], ans:1, exp:"Una Región es una ubicación geográfica (us-east-1). Dentro hay múltiples AZ: datacenters físicamente separados para garantizar alta disponibilidad." },
+    { q:"¿Qué es el modelo de responsabilidad compartida en cloud?", opts:["El proveedor y cliente comparten costos al 50%","El proveedor asegura la infraestructura 'de' la nube; el cliente asegura lo que pone 'en' la nube (datos, configuraciones, accesos)","Ambos deben aprobar juntos cualquier cambio","Solo el proveedor es responsable de toda la seguridad"], ans:1, exp:"El proveedor asegura la infraestructura física y el hypervisor. El cliente es responsable de sus datos, configuración de accesos, cifrado y sus aplicaciones." }
+  ]},
+  { id:'html', name:'HTML, WWW y SEO', icon:'📄', questions:[
+    { q:"¿Cuál es la diferencia entre Internet y la World Wide Web?", opts:["Son sinónimos","Internet es la infraestructura global de redes; la WWW es un servicio sobre Internet basado en HTTP/HTML","La WWW es la red física; Internet es solo el correo","Internet fue creado después de la WWW"], ans:1, exp:"Internet es la red de redes (infraestructura física). La WWW es uno de los servicios sobre Internet, que usa HTTP para servir documentos HTML hipervinculados." },
+    { q:"¿Por qué usar <article>, <aside> y <section> en lugar de <div> genéricos?", opts:["Cargan más rápido","Mejoran SEO y accesibilidad: buscadores y lectores de pantalla entienden mejor el contenido","Aplican CSS automáticamente","Permiten ejecutar JS directamente"], ans:1, exp:"Las etiquetas semánticas HTML5 describen el propósito del contenido. Los motores de búsqueda (SEO) y lectores de pantalla interpretan correctamente la estructura." },
+    { q:"¿Qué diferencia hay entre <strong> y <b> en HTML5?", opts:["Son idénticas","<strong> tiene énfasis semántico (importancia); <b> solo aplica negrita visual","<b> es para JS; <strong> solo para CSS","<strong> solo funciona en formularios"], ans:1, exp:"<strong> indica importancia semántica (los lectores de pantalla lo enfatizan). <b> es solo visual (negrita) sin valor semántico. HTML5 separa presentación de significado." },
+    { q:"¿Qué etiqueta HTML5 se usa para el bloque de navegación principal?", opts:["<header>","<section>","<nav>","<aside>"], ans:2, exp:"<nav> es la etiqueta semántica para el bloque de navegación principal. <header> es la cabecera, <section> agrupa contenido temático y <aside> es para contenido lateral." },
+    { q:"¿Qué rol cumple el W3C?", opts:["Es el dueño de HTTP y cobra licencias","Publica estándares y recomendaciones que garantizan la interoperabilidad de la Web","Administra el registro de dominios .com","Desarrolla y mantiene JavaScript"], ans:1, exp:"El W3C (World Wide Web Consortium), fundado por Tim Berners-Lee, desarrolla estándares como HTML5, CSS3, SVG y WebAssembly para la interoperabilidad web." },
+    { q:"¿Cuál es la función del atributo 'alt' en una etiqueta <img>?", opts:["Define el tamaño en píxeles","Provee texto alternativo para accesibilidad y SEO cuando la imagen no puede mostrarse","Aplica un filtro de color","Conecta la imagen con CSS"], ans:1, exp:"El atributo alt es crucial para accesibilidad (lectores de pantalla lo leen) y SEO (los buscadores indexan el texto alt). También aparece cuando la imagen falla." },
+    { q:"¿Qué es el SEO?", opts:["Un protocolo de seguridad web","Técnicas para mejorar la visibilidad y posicionamiento de un sitio en resultados orgánicos de buscadores","Un framework CSS para diseño responsive","Un sistema de caché para acelerar páginas"], ans:1, exp:"SEO (Search Engine Optimization) es el conjunto de prácticas (técnicas, de contenido y de autoridad) para mejorar el ranking orgánico en buscadores como Google." },
+    { q:"¿Cuál es la diferencia entre <em> y <i> en HTML5?", opts:["Son idénticas","<em> tiene énfasis semántico (los lectores lo entonan); <i> solo aplica cursiva visual","<i> es para JS; <em> solo para CSS","No hay diferencia funcional"], ans:1, exp:"<em> indica énfasis semántico (el lector cambia la entonación). <i> es cursiva puramente visual sin énfasis semántico (útil para términos técnicos o palabras en otro idioma)." },
+    { q:"¿Para qué sirve <meta name='viewport'>?", opts:["Define el idioma del documento","Controla cómo el navegador escala la página en dispositivos móviles","Agrega palabras clave para SEO","Conecta con Google Analytics"], ans:1, exp:"<meta name='viewport' content='width=device-width, initial-scale=1'> es esencial para diseño responsive: indica al navegador móvil que use el ancho real del dispositivo." },
+    { q:"¿Qué representa el DOM?", opts:["Un lenguaje alternativo a JS","La representación en árbol de los elementos HTML que JS puede manipular","Un protocolo cliente-servidor","Una base de datos del navegador"], ans:1, exp:"El DOM (Document Object Model) es la representación del HTML como árbol de objetos en memoria. JS lo manipula con getElementById, querySelector, addEventListener." },
+    { q:"¿Qué significa 'responsive design'?", opts:["Un diseño que responde rápido a peticiones del servidor","Un diseño que se adapta y se ve correctamente en diferentes tamaños de pantalla","Un diseño que cambia de colores según el usuario","Un diseño que solo funciona en navegadores modernos"], ans:1, exp:"Responsive Design usa media queries CSS, layouts flexibles (Flexbox/Grid) e imágenes escalables para que la interfaz se adapte a cualquier tamaño de pantalla." },
+    { q:"¿Cuál es la función de la etiqueta <head> en HTML?", opts:["Muestra el encabezado visual de la página","Contiene metadatos del documento: título, charset, CSS, scripts que no se muestran directamente","Define el área de navegación superior","Agrupa todos los encabezados h1-h6"], ans:1, exp:"<head> contiene metadatos no visibles: <title>, <meta>, <link> para CSS, <script>, y directivas para el navegador y motores de búsqueda." },
+    { q:"¿Qué es ARIA en accesibilidad web?", opts:["Un framework JS para animaciones","Atributos HTML que mejoran la accesibilidad para tecnologías asistivas","Un protocolo de seguridad para formularios","Una herramienta de análisis SEO"], ans:1, exp:"ARIA (Accessible Rich Internet Applications) son atributos HTML (role, aria-label, aria-hidden) que proveen contexto semántico para lectores de pantalla en apps web complejas." },
+    { q:"¿Cuál es la diferencia entre CSS inline, interno y externo?", opts:["No hay diferencia","Inline en el atributo style; interno en <style> del <head>; externo en archivo .css enlazado con <link>","El externo solo funciona en producción","El inline tiene menor prioridad que el externo"], ans:1, exp:"Inline (atributo style): máxima especificidad, difícil de mantener. Interno (<style> en <head>): para una sola página. Externo (.css): reutilizable, mejor práctica." },
+    { q:"¿Qué es Flexbox en CSS?", opts:["Una librería JS para layouts","Modelo de layout CSS unidimensional que facilita distribución y alineación de elementos en fila o columna","Un framework CSS para tablas responsivas","Un tipo de animación CSS"], ans:1, exp:"CSS Flexbox es un modelo de layout unidimensional (fila o columna) que facilita la distribución, alineación y ordenamiento de elementos en un contenedor, incluso con tamaños dinámicos." }
+  ]},
+  { id:'js', name:'JavaScript ES6+', icon:'⚡', questions:[
+    { q:"¿Qué es ECMAScript en relación con JavaScript?", opts:["Un framework de JS para Node.js","El estándar oficial que define la especificación del lenguaje JavaScript (ECMA-262)","El nombre del motor V8 de Google","Una versión de JS para IE"], ans:1, exp:"ECMAScript es el estándar (ECMA-262) que estandariza JavaScript. ES6 (2015), ES2017, ES2022 son versiones de este estándar. V8 y SpiderMonkey son implementaciones." },
+    { q:"¿Cuál es la diferencia entre let, const y var?", opts:["Son intercambiables","var tiene scope de función con hoisting; let/const tienen scope de bloque; const no permite reasignación","let es para números; const para strings","const siempre es más lento que var"], ans:1, exp:"var: scope de función, se hoistea al inicio. let/const: scope de bloque ({}). const no permite reasignar la referencia (pero sí mutar objetos/arrays)." },
+    { q:"¿Qué son las Promesas en JavaScript?", opts:["Objetos que garantizan código sin errores","Objetos que representan el resultado eventual (éxito o error) de una operación asíncrona","Funciones sincrónicas en el servidor","Arrays especiales para múltiples valores"], ans:1, exp:"Una Promise puede estar: pending, fulfilled o rejected. Reemplaza callbacks anidados con .then()/.catch() o async/await." },
+    { q:"¿Qué ventaja ofrece async/await sobre .then()/.catch()?", opts:["Es más rápido en ejecución","Hace el código asíncrono más legible (parece síncrono) con manejo de errores try/catch","Solo funciona en Node.js","No hay ventaja real entre ambos"], ans:1, exp:"async/await es azúcar sintáctico sobre Promises. El código asíncrono se lee como síncrono y usa try/catch familiar para manejo de errores." },
+    { q:"¿Qué es un closure en JavaScript?", opts:["Error de sintaxis con llaves incorrectas","Función que recuerda las variables del scope donde fue creada, incluso después de que ese scope terminó","Método para cerrar conexiones HTTP","Forma de cerrar módulos en Node.js"], ans:1, exp:"Un closure es una función con acceso a las variables de su scope externo incluso después de que la función externa retornó. Fundamental para el patrón módulo y callbacks." },
+    { q:"¿Qué es el Event Loop en JavaScript?", opts:["Un bucle for especial para eventos del DOM","Mecanismo que permite a JS ejecutar código no bloqueante gestionando la cola de tareas asíncronas","Una librería para manejo de eventos del teclado","El sistema de caché del motor V8"], ans:1, exp:"El Event Loop: el hilo principal ejecuta código síncrono. Las operaciones asíncronas (fetch, setTimeout) van a la Call Queue. Cuando el call stack está vacío, el Event Loop las ejecuta." },
+    { q:"¿Cuál es la diferencia entre == y === en JavaScript?", opts:["Son idénticos","== compara con coerción de tipos; === compara valor Y tipo sin coerción (más seguro)","=== solo para strings; == para números","== compara objetos; === compara primitivos"], ans:1, exp:"== hace coerción de tipos ('5'==5 → true). === no hace coerción ('5'===5 → false). Siempre se recomienda usar === para evitar comportamientos inesperados." },
+    { q:"¿Qué son los módulos ES6 (import/export)?", opts:["Una versión de Node.js","Sistema nativo de módulos que permite dividir el código en archivos reutilizables","Un plugin de Webpack","Una herramienta para ofuscar código JS"], ans:1, exp:"Los módulos ES6 permiten exportar (export) funciones, clases o variables de un archivo e importarlas (import) en otro, facilitando la modularidad del código." },
+    { q:"¿Qué hace el método fetch()?", opts:["Manipula el DOM","API nativa para realizar peticiones HTTP asíncronas, retornando una Promise","Lee archivos locales","Selecciona elementos del DOM como jQuery"], ans:1, exp:"fetch() es la API moderna del navegador para peticiones HTTP. Devuelve una Promise que resuelve a un Response. Es el reemplazo moderno de XMLHttpRequest (XHR)." },
+    { q:"¿Qué son los arrow functions (=>)?", opts:["Operador de comparación mayor o igual","Funciones con sintaxis corta que heredan el 'this' del contexto donde se definen","Un tipo de bucle for abreviado","Forma de declarar variables en ES6"], ans:1, exp:"Las arrow functions (ES6) tienen sintaxis concisa y no tienen su propio 'this': lo heredan del scope contenedor. Ideales para callbacks." },
+    { q:"¿Qué es la desestructuración (destructuring) en ES6?", opts:["Eliminar propiedades de un objeto","Sintaxis que extrae valores de arrays u objetos asignándolos a variables de forma concisa","Destruir el DOM dinámicamente","Método para comparar dos objetos"], ans:1, exp:"Destructuring extrae valores elegantemente: const {nombre, edad} = persona; o const [a, b] = array. Reduce código repetitivo y mejora legibilidad." },
+    { q:"¿Qué son los template literals en ES6?", opts:["Una librería para templates HTML","Strings con backticks (`) que permiten interpolación con ${} y cadenas multilinea","Un tipo especial de comentario","Herramienta para generar documentación"], ans:1, exp:"Template literals usan backticks para: interpolación (`Hola ${nombre}`), strings multilínea y tagged templates. Reemplazan la concatenación con + de ES5." },
+    { q:"¿Qué es Node.js?", opts:["Framework frontend para interfaces","Entorno de ejecución de JS del lado del servidor basado en el motor V8 de Chrome","Una base de datos NoSQL para JS","Sistema operativo para servidores web"], ans:1, exp:"Node.js permite ejecutar JS fuera del navegador (en el servidor). Usa E/S no bloqueante. Es la base de npm, Express.js y herramientas de build como Webpack." },
+    { q:"¿Qué es el prototipo (prototype) en JavaScript?", opts:["Una versión de prueba de un módulo","El mecanismo de herencia de JS: los objetos heredan propiedades y métodos de su prototipo","Un tipo especial de promesa asíncrona","Una plantilla de componente en React"], ans:1, exp:"JS usa herencia prototípica. Cada objeto tiene un [[Prototype]] que apunta a otro objeto. Si una propiedad no existe, se busca en la cadena de prototipos." },
+    { q:"¿Cuál es la diferencia entre SPA y una aplicación web tradicional (MPA)?", opts:["Una SPA solo tiene una página de inicio","En una SPA el JS maneja la navegación en el cliente sin recargar; en una MPA el servidor entrega nueva página completa en cada navegación","Una SPA es más segura que una MPA","Las SPAs no pueden hacer peticiones al servidor"], ans:1, exp:"En una SPA (React, Angular, Vue) el navegador carga la app una vez y JS actualiza el contenido dinámicamente. En una MPA, cada URL genera un nuevo request al servidor con HTML completo." }
+  ]},
+  { id:'fw', name:'Frameworks y Librerías', icon:'🛠️', questions:[
+    { q:"¿Cuál es la diferencia conceptual entre un Framework y una Librería?", opts:["Son sinónimos","Un Framework controla el flujo (Inversion of Control); una librería es código que el desarrollador llama cuando quiere","Un Framework solo es para backend; una librería solo para frontend","Las librerías son de pago; los frameworks siempre gratis"], ans:1, exp:"La diferencia clave es la 'Inversión de Control': el framework llama tu código (tú te adaptas a él). Con una librería, tú llamas al código de la librería cuando lo necesitas." },
+    { q:"¿Cuál de los siguientes es un Framework Frontend JS completo y opinionado?", opts:["jQuery","Lodash","Angular","Axios"], ans:2, exp:"Angular (Google) es un framework completo: incluye enrutador, formularios reactivos, HTTP client e inyección de dependencias. jQuery, Lodash y Axios son librerías." },
+    { q:"React.js es técnicamente:", opts:["Un framework MVC completo","Una librería para construir interfaces de usuario basada en componentes","Un framework backend para Node.js","Una base de datos reactiva"], ans:1, exp:"React (Meta) es una librería de UI, no un framework completo. Solo maneja la vista. Para routing o estado global se necesitan librerías adicionales." },
+    { q:"¿Cuál es la diferencia principal entre Vue.js y React.js?", opts:["Vue usa TypeScript exclusivamente","Vue usa templates HTML con directivas (v-if, v-for); React usa JSX y es más flexible","Vue es solo para mobile","No hay diferencia técnica"], ans:1, exp:"Vue usa plantillas HTML con directivas más intuitivas. React usa JSX (HTML en JS). Vue tiene menor curva de aprendizaje; React tiene mayor ecosistema y flexibilidad." },
+    { q:"¿Qué hace jQuery que lo hizo históricamente tan popular?", opts:["Permite crear APIs REST","Simplifica manipulación del DOM, eventos y AJAX con sintaxis corta y compatible entre navegadores","Compila TypeScript a JS","Gestiona estado global en React"], ans:1, exp:"jQuery simplificó enormemente la selección DOM ($('#id')), manipulación, animaciones, AJAX y compatibilidad entre navegadores con una API unificada." },
+    { q:"¿Cuál es la diferencia entre Bootstrap y Tailwind CSS?", opts:["Bootstrap es para JS; Tailwind para CSS","Bootstrap provee componentes prediseñados; Tailwind es utility-first con clases atómicas sin componentes predefinidos","Tailwind solo funciona con React","Son equivalentes"], ans:1, exp:"Bootstrap ofrece componentes listos (botones, navbar, modal). Tailwind es utility-first: clases pequeñas atómicas (p-4, flex, text-blue-500) con las que construyes tu propio diseño." },
+    { q:"¿Para qué sirve Axios?", opts:["Framework CSS para diseño responsive","Librería para peticiones HTTP desde el navegador o Node.js de forma sencilla","Compilador de TypeScript a JS","Framework para testing automatizado"], ans:1, exp:"Axios es una librería HTTP basada en promesas. Simplifica requests con interceptores, transformación automática de JSON, manejo de errores y soporte para cancelación." },
+    { q:"¿Qué es Next.js y cómo se relaciona con React?", opts:["Es una alternativa a React","Framework sobre React que añade SSR, SSG, enrutamiento por archivos y optimizaciones de producción","Una librería de animaciones para React","El compilador oficial de React"], ans:1, exp:"Next.js (Vercel) es un meta-framework sobre React. Añade: SSR, SSG, App Router, optimización de imágenes y API Routes." },
+    { q:"¿Cuál es la principal ventaja de TypeScript sobre JavaScript puro?", opts:["TS ejecuta más rápido en el navegador","TS agrega tipado estático que detecta errores en tiempo de desarrollo antes de ejecutar el código","TS reemplaza HTML en interfaces","TS solo funciona con Angular"], ans:1, exp:"TypeScript es un superconjunto de JS con tipos estáticos opcionales. Detecta errores como tipos incorrectos o propiedades inexistentes en el editor, antes de ejecutar." },
+    { q:"¿Qué es Webpack?", opts:["Framework CSS para layouts","Bundler de módulos: agrupa y optimiza JS, CSS e imágenes en archivos optimizados para producción","Librería de estado global para React","Servidor web para Node.js"], ans:1, exp:"Webpack es un module bundler: analiza dependencias del proyecto y genera bundles optimizados. Permite import de módulos, transpilación con Babel y procesamiento de CSS." },
+    { q:"¿Qué es Express.js?", opts:["Framework frontend como React","Framework backend minimalista para Node.js que facilita crear servidores HTTP y APIs REST","Librería CSS para componentes de UI","Base de datos para apps JavaScript"], ans:1, exp:"Express.js es el framework backend más popular para Node.js. Provee sistema de rutas, middleware y utilidades para crear servidores HTTP y APIs REST." },
+    { q:"¿Qué significa 'Virtual DOM' en React?", opts:["Un DOM que solo existe en servidores virtuales","Representación en memoria del DOM real que React usa para calcular el mínimo de cambios antes de actualizar el DOM real","Una versión simplificada del DOM sin eventos","Una copia de seguridad del DOM"], ans:1, exp:"El Virtual DOM es una representación JS del DOM real. React compara el VDOM anterior con el nuevo (reconciliación/diffing) y solo actualiza los nodos que cambiaron." },
+    { q:"¿Cuál es la diferencia entre npm y yarn?", opts:["npm es para frontend; yarn para backend","Ambos son gestores de paquetes para Node.js; yarn fue creado por Facebook para mejorar velocidad y consistencia","npm instala librerías locales; yarn solo globales","Yarn es simplemente la versión nueva de npm"], ans:1, exp:"npm y yarn son gestores de paquetes para Node.js. Yarn (Meta) introdujo instalación paralela, lockfile detallado y caché offline como mejoras sobre el npm original." },
+    { q:"¿Qué es Redux en el ecosistema React?", opts:["Un framework CSS para React","Librería de gestión de estado global con un store centralizado y acciones inmutables","El enrutador oficial de React","Una herramienta de testing para componentes React"], ans:1, exp:"Redux gestiona estado global: usa un store centralizado, actions y reducers (funciones puras). Resuelve el 'prop drilling' en apps complejas." },
+    { q:"¿Qué es Vite en el desarrollo frontend moderno?", opts:["Un framework CSS alternativo a Tailwind","Herramienta de build ultrarrápida que usa ES modules nativos en desarrollo y Rollup para producción","Una librería de animaciones para Vue","Un gestor de paquetes alternativo a npm"], ans:1, exp:"Vite (Evan You, creador de Vue) usa ES modules nativos en desarrollo (sin bundling → arranque instantáneo) y Rollup para builds de producción optimizados." }
+  ]}
+];
+</script>
+
+<script>
+let selectedSections = new Set();
+let activeQuestions = [];
+let answers = [];
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function buildHome() {
+  const grid = document.getElementById('sections-grid');
+  grid.innerHTML = '';
+
+  if (!Array.isArray(SECTIONS) || SECTIONS.length === 0) {
+    grid.innerHTML = '<p style="color:var(--wrong);font-family:var(--mono);font-size:12px;">No hay secciones cargadas. Revisa la variable SECTIONS.</p>';
+    updateStartBtn();
+    return;
+  }
+
+  SECTIONS.forEach(sec => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'sec-card' + (selectedSections.has(sec.id) ? ' selected' : '');
+    card.dataset.id = sec.id;
+    card.innerHTML = `
+      <span class="sec-check">✓</span>
+      <div class="sec-icon">${sec.icon}</div>
+      <div class="sec-name">${sec.name}</div>
+      <div class="sec-count">${sec.questions.length} preguntas</div>
+    `;
+    card.addEventListener('click', () => toggleSection(sec.id));
+    grid.appendChild(card);
+  });
+
+  updateStartBtn();
+}
+
+function toggleSection(id) {
+  if (selectedSections.has(id)) selectedSections.delete(id);
+  else selectedSections.add(id);
+  buildHome();
+}
+
+function updateStartBtn() {
+  const n = selectedSections.size;
+  const totalQuestions = SECTIONS
+    .filter(s => selectedSections.has(s.id))
+    .reduce((acc, s) => acc + s.questions.length, 0);
+
+  const btn = document.getElementById('start-btn');
+  const note = document.getElementById('start-note');
+
+  btn.disabled = n === 0;
+  btn.textContent = n === 0 ? 'Comenzar Quiz' : `Comenzar Quiz · ${totalQuestions} preguntas`;
+  note.textContent = n === 0
+    ? 'Selecciona al menos una sección'
+    : `${n} sección${n>1?'es':''} seleccionada${n>1?'s':''}`;
+}
+
+document.getElementById('btn-all').addEventListener('click', () => {
+  SECTIONS.forEach(s => selectedSections.add(s.id));
+  buildHome();
+});
+
+document.getElementById('btn-none').addEventListener('click', () => {
+  selectedSections.clear();
+  buildHome();
+});
+
+document.getElementById('start-btn').addEventListener('click', startQuiz);
+
+function startQuiz() {
+  activeQuestions = [];
+
+  SECTIONS
+    .filter(s => selectedSections.has(s.id))
+    .forEach(sec => {
+      sec.questions.forEach(q => activeQuestions.push({ ...q, section: sec.name, secId: sec.id }));
+    });
+
+  answers = new Array(activeQuestions.length).fill(null);
+  showScreen('screen-quiz');
+  buildQuizDOM();
+  updateProgress();
+}
+
+function buildQuizDOM() {
+  const body = document.getElementById('quiz-body');
+  body.innerHTML = '';
+  const letters = ['a','b','c','d'];
+  let lastSection = '';
+
+  activeQuestions.forEach((q, i) => {
+    if (q.section !== lastSection) {
+      lastSection = q.section;
+      const div = document.createElement('div');
+      div.className = 'section-divider';
+      div.innerHTML = `<span class="tag">${q.section}</span><div class="line"></div>`;
+      body.appendChild(div);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `qcard-${i}`;
+    card.innerHTML = `
+      <div class="q-header">
+        <div class="q-num">${String(i+1).padStart(2,'0')}</div>
+        <div class="q-text">${q.q}</div>
+      </div>
+      <div class="options" id="qopts-${i}">
+        ${q.opts.map((o,oi)=>`
+          <button type="button" class="option" data-q="${i}" data-o="${oi}">
+            <div class="opt-letter">${letters[oi]}</div>
+            <div class="opt-text">${o}</div>
+          </button>
+        `).join('')}
+      </div>
+      <div class="feedback" id="qfb-${i}"></div>
+    `;
+    body.appendChild(card);
+  });
+
+  body.addEventListener('click', onOptionClick);
+  document.getElementById('qh-title').textContent = `${selectedSections.size} sección${selectedSections.size>1?'es':''}`;
+}
+
+function onOptionClick(e){
+  const opt = e.target.closest('.option');
+  if (!opt) return;
+  const qi = parseInt(opt.dataset.q, 10);
+  const oi = parseInt(opt.dataset.o, 10);
+  if (Number.isNaN(qi) || Number.isNaN(oi)) return;
+  if (answers[qi] !== null) return;
+  selectAnswer(qi, oi);
+}
+
+function selectAnswer(qi, oi) {
+  answers[qi] = oi;
+  const q = activeQuestions[qi];
+  const opts = document.querySelectorAll(`#qopts-${qi} .option`);
+  const card = document.getElementById(`qcard-${qi}`);
+  const fb = document.getElementById(`qfb-${qi}`);
+  const correct = oi === q.ans;
+
+  opts.forEach(o => {
+    o.classList.add('locked');
+    o.disabled = true;
+  });
+
+  if (opts[oi]) opts[oi].classList.add(correct ? 'correct' : 'wrong');
+  if (!correct && opts[q.ans]) opts[q.ans].classList.add('correct');
+
+  card.classList.add(correct ? 'answered-correct' : 'answered-wrong');
+  fb.className = `feedback ${correct ? 'correct-fb' : 'wrong-fb'} show`;
+  fb.innerHTML = `<strong>${correct ? '✓ ¡Correcto!' : '✗ Incorrecto.'}</strong>${q.exp}`;
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = answers.filter(a => a !== null).length;
+  const total = activeQuestions.length || 1;
+  document.getElementById('prog-fill').style.width = (done/total*100) + '%';
+  document.getElementById('qh-counter').textContent = `${done}/${activeQuestions.length}`;
+  document.getElementById('submit-btn').disabled = done < activeQuestions.length || activeQuestions.length === 0;
+}
+
+document.getElementById('submit-btn').addEventListener('click', showResults);
+document.getElementById('back-btn').addEventListener('click', () => {
+  if (confirm('¿Seguro que quieres salir? Perderás tu progreso actual.')) {
+    showScreen('screen-home');
+  }
+});
+
+function showResults() {
+  showScreen('screen-results');
+
+  let correct = 0;
+  answers.forEach((a, i) => { if (a === activeQuestions[i].ans) correct++; });
+
+  const total = activeQuestions.length;
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  document.getElementById('res-score').innerHTML = `${correct}<span class="score-denom">/${total}</span>`;
+  document.getElementById('res-pct').textContent = `${pct}% de respuestas correctas`;
+  document.getElementById('s-correct').textContent = correct;
+  document.getElementById('s-wrong').textContent = total - correct;
+  document.getElementById('s-pct').textContent = pct + '%';
+
+  let gc, gt;
+  if (pct >= 90) { gc='grade-a'; gt='🏆 Excelente'; }
+  else if (pct >= 75) { gc='grade-b'; gt='👍 Muy Bien'; }
+  else if (pct >= 60) { gc='grade-c'; gt='📚 Aprobado'; }
+  else { gc='grade-d'; gt='⚠️ Necesita Repaso'; }
+
+  const grEl = document.getElementById('res-grade');
+  grEl.className = `score-grade ${gc}`;
+  grEl.textContent = gt;
+
+  const secScores = document.getElementById('section-scores');
+  secScores.innerHTML = '';
+  const secMap = {};
+
+  activeQuestions.forEach((q,i)=>{
+    if(!secMap[q.secId]) secMap[q.secId]={name:q.section,total:0,correct:0};
+    secMap[q.secId].total++;
+    if(answers[i]===q.ans) secMap[q.secId].correct++;
+  });
+
+  Object.values(secMap).forEach(s=>{
+    const sp=Math.round((s.correct/s.total)*100);
+    const color=sp>=80?'var(--correct)':sp>=60?'var(--accent)':'var(--wrong)';
+    const div=document.createElement('div');
+    div.className='ss-card';
+    div.innerHTML=`<div class="ss-name">${s.name}</div><div class="ss-bar-track"><div class="ss-bar-fill" style="width:0%;background:${color}" data-w="${sp}"></div></div><div class="ss-stat">${s.correct}/${s.total} · ${sp}%</div>`;
+    secScores.appendChild(div);
+  });
+
+  setTimeout(()=>{
+    document.querySelectorAll('.ss-bar-fill').forEach(el=>{
+      el.style.width = el.dataset.w + '%';
+    });
+  },120);
+
+  const letters=['a','b','c','d'];
+  const list=document.getElementById('results-list');
+  const wrong=answers.map((a,i)=>({a,i})).filter(({a,i})=>a!==activeQuestions[i].ans);
+
+  if(wrong.length===0){
+    list.innerHTML='<div style="text-align:center;padding:30px;color:var(--correct);font-size:18px;font-weight:700;">🎉 ¡Perfecto! Respondiste todo correctamente.</div>';
+  } else {
+    list.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-family:var(--mono);">${wrong.length} pregunta(s) incorrecta(s):</p>`;
+    wrong.forEach(({a,i})=>{
+      const q=activeQuestions[i];
+      const div=document.createElement('div');
+      div.className='result-item';
+      div.innerHTML=`
+        <div class="r-meta"><span class="r-qnum">Pregunta ${i+1} · ${q.section}</span><span class="r-badge bad">✗ Incorrecta</span></div>
+        <div class="r-question">${q.q}</div>
+        <div class="r-answer">Tu respuesta: <span class="bad-ans">${letters[a]}) ${q.opts[a]}</span></div>
+        <div class="r-answer">Respuesta correcta: <span class="ok-ans">${letters[q.ans]}) ${q.opts[q.ans]}</span></div>
+        <div class="r-explanation">💡 ${q.exp}</div>`;
+      list.appendChild(div);
+    });
+  }
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.getElementById('retry-btn').addEventListener('click',()=>{
+  answers = new Array(activeQuestions.length).fill(null);
+  showScreen('screen-quiz');
+  buildQuizDOM();
+  updateProgress();
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+document.getElementById('home-btn').addEventListener('click',()=>showScreen('screen-home'));
+
+buildHome();
+</script>
+</body>
+</html>
