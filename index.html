@@ -726,6 +726,8 @@ function startQuiz() {
   showScreen('screen-quiz');
   buildQuizDOM();
   updateProgress();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  setTimeout(() => window.scrollTo({ top: 160, behavior: 'smooth' }), 150);
 }
 
 function buildQuizDOM() {
